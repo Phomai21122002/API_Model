@@ -5,6 +5,7 @@ from PIL import Image
 import io
 import Prediction
 import Upload_img
+import DetectObject
 import requests
 from pydantic import BaseModel
 
@@ -13,9 +14,8 @@ app = FastAPI()
 class PredictionRequest(BaseModel):  # Định nghĩa một lớp BaseModel cho request body
     file_url: str | None = ''
 
-async def process_image(bytes_io):
+async def process_image(image):
     try:
-      image = Image.open(bytes_io)
       result_label, result_accuracy, result_id = Prediction.get_result(image)
 
       return result_id, result_label, result_accuracy
@@ -29,6 +29,8 @@ async def index():
 
 @app.post("/api/prediction")
 async def predict_api(file: UploadFile = File(None), file_url: str = Form(None)):
+    objectSplImage = []
+
     if not file and not file_url:
         raise HTTPException(status_code=400, detail="Please provide either a file or a file URL")
     
@@ -44,17 +46,25 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
         # Nếu đầu vào là một file được tải lên, xử lý hình ảnh từ file
         bytes_io = io.BytesIO(contents)
 
-        # predict img
-        result_id, result_label, result_accuracy = await process_image(bytes_io)
+        countImgSpl = DetectObject.DetectAnimal(bytes_io)
 
-        # upload img to cloudinary
-        upload_result = Upload_img.Upload_img_to_cloudinary(contents, result_label)
-        if upload_result is not None:
-          id_img, url_img = upload_result
-        else:
-          return {"message": "Upload image return None"}
+        if(len(countImgSpl) > 0):
+          for img in countImgSpl:
+             # predict img
+            result_id, result_label, result_accuracy = await process_image(img)
 
-        return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img}
+            # upload img to cloudinary
+            upload_result = Upload_img.Upload_img_to_cloudinary(img, result_label)
+            if upload_result is not None:
+              id_img, url_img = upload_result
+            else:
+              return {"message": "Upload image return None"}
+            
+            objectSplImage.append({"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img})
+        
+        objectSplImage = sorted(objectSplImage, key=lambda x: x['accuracy'], reverse=True)
+
+        return objectSplImage
     
     if file_url:
       if not ((file_url.startswith("http://") or file_url.startswith("https://")) and file_url.split(".")[-1] in ("jpg", "jpeg", "png")):
@@ -65,16 +75,26 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
           response = requests.get(file_url)
           response.raise_for_status()
           bytes_io = io.BytesIO(response.content)
-          # predict img
-          result_id, result_label, result_accuracy = await process_image(bytes_io)
-          # upload img to cloudinary
-          upload_result = Upload_img.Upload_img_to_cloudinary(file_url, result_label)
-          if upload_result is not None:
-            id_img, url_img = upload_result
-          else:
-            return {"message": "Upload image return None"}
           
-          return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img}
+          countImgSpl = DetectObject.DetectAnimal(bytes_io)
+
+          if(len(countImgSpl) > 0):
+            for img in countImgSpl:
+              # predict img
+              result_id, result_label, result_accuracy = await process_image(img)
+
+              # upload img to cloudinary
+              upload_result = Upload_img.Upload_img_to_cloudinary(img, result_label)
+              if upload_result is not None:
+                id_img, url_img = upload_result
+              else:
+                return {"message": "Upload image return None"}
+              
+              objectSplImage.append({"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img})
+          
+          objectSplImage = sorted(objectSplImage, key=lambda x: x['accuracy'], reverse=True)
+
+          return objectSplImage
       except Exception as e:
           raise HTTPException(status_code=500, detail=str(e))
 

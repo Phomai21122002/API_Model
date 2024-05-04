@@ -6,6 +6,7 @@ from keras.applications.mobilenet_v2 import preprocess_input
 import tensorflow as tf
 from keras.models import load_model
 import h5py
+import cv2
 
 print(tf.__version__)
 path_model = 'my_model_NetV2.h5'
@@ -32,7 +33,7 @@ with open(json_file_path, 'r') as json_file:
 labels_dict = {v: k for k, v in labels_dict.items()}
 
 def transform_image(image):
-    image = image.resize((224, 224))  # Resize hình ảnh
+    image = cv2.resize(image, (224, 224))  # Resize hình ảnh
     image_array = img_to_array(image) 
     image_array = np.expand_dims(image_array, axis=0)
     preprocessed_image = preprocess_input(image_array) 
@@ -42,7 +43,6 @@ def get_prediction(image_bytes):
   input_imgs = transform_image( image_bytes)
   predictions = model.predict([input_imgs])
   predicted_label_index  = np.argmax(predictions)
-  print(predicted_label_index)
   accuracy_label = round(predictions[0][predicted_label_index] * 100, 2)
   predicted_label = labels_dict[predicted_label_index]
   return predicted_label, accuracy_label, predicted_label_index

@@ -2,13 +2,14 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from dotenv import dotenv_values
+import cv2
+from io import BytesIO
 
 folder_img = "Data/"
 
-def Upload_img_to_cloudinary(url, label):
+def Upload_img_to_cloudinary(image_data, label):
 
   folder_upload = folder_img + label
-  print(folder_upload)
 
   try:
     env_vars = dotenv_values(".env")
@@ -24,7 +25,12 @@ def Upload_img_to_cloudinary(url, label):
       secure = True
       )
 
-    response = cloudinary.uploader.upload(url, folder = folder_upload)
+    # Convert image data to JPEG format
+    ret, buf = cv2.imencode('.jpg', image_data)
+    encoded_image = BytesIO(buf)
+
+    # Upload the image to Cloudinary
+    response = cloudinary.uploader.upload(encoded_image, folder=folder_upload)
     return response["asset_id"], response["secure_url"]
 
   except Exception as e:
