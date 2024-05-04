@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import os
 
 
 # Load YOLO
@@ -16,11 +15,9 @@ if isinstance(unconnected_layers, int):  # Kiểm tra nếu nó trả về một
 
 output_layers = [layer_names[i - 1] for i in unconnected_layers]
 
-
-
-def DetectAnimal(img):
+def DetectAnimal(file_path):
     imagesDetected = []
-    
+    img = cv2.imread(file_path)
     img = cv2.resize(img, None, fx=1, fy=1)
     height, width, channels = img.shape
 
@@ -64,5 +61,13 @@ def DetectAnimal(img):
                 imagesDetected.append(cropped_image)
     return imagesDetected
 
-       
+img = "./uploads/tim-hieu-ve-giong-cho-shiba-nguon-goc-dac-diem-cach-nuoi-bang-gia-202203281503364263.jpg"
+
+imagesDetected = DetectAnimal(img)
+print(len(imagesDetected))
+for image in imagesDetected:
+    cv2.imshow("image", image)
+
+cv2.waitKey(0) 
+cv2.destroyAllWindows() 
 
