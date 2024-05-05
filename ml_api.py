@@ -7,8 +7,17 @@ import Prediction
 import Upload_img
 import requests
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Accept", "Accept-Encoding", "Authorization", "Content-Type"],
+)
 
 class PredictionRequest(BaseModel):  # Định nghĩa một lớp BaseModel cho request body
     file_url: str | None = ''
@@ -57,8 +66,8 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
         return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img}
     
     if file_url:
-      if not ((file_url.startswith("http://") or file_url.startswith("https://")) and file_url.split(".")[-1] in ("jpg", "jpeg", "png")):
-        raise HTTPException(status_code=400, detail="Invalid file URL")
+      # if not ((file_url.startswith("http://") or file_url.startswith("https://")) and file_url.split(".")[-1] in ("jpg", "jpeg", "png")):
+      #   raise HTTPException(status_code=400, detail="Invalid file URL")
         
       # Tải hình ảnh từ URL trực tiếp
       try:
