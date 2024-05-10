@@ -77,19 +77,44 @@ def convert_to_json(obj):
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 def data_db(result_label):
-  db = connect_db(path_db)
-  collection = db["cardBreed"]
+  try:
+    db = connect_db(path_db)
+    collection = db["cardBreed"]
 
-  name = result_label.split("_")[1:]
-  name = ' '.join(name)
-  name = re.compile(name, re.IGNORECASE)
+    name = result_label.split("_")[1:]
+    name = ' '.join(name)
+    name = re.compile(name, re.IGNORECASE)
 
-  projection = {"__v": 0, "htmlDomDescription": 0}
-  query = {"breed_name": {"$regex": name}}
-  data_breed = collection.find_one(query, projection)
-  data_breed = json.dumps(data_breed, default=convert_to_json)
-  
-  return data_breed
+    pipeline = [
+        {
+            "$match": {"breed_name": {"$regex": name}}  # Chỉ lấy thông tin của thú cưng có _id = 1
+        },
+        {
+            "$lookup": {
+                "from": "product",
+                "localField": "diet",
+                "foreignField": "_id",
+                "as": "diets"
+            }
+        },
+        {
+          "$project": {
+              "__v": 0,
+              "htmlDomDescription": 0,
+              "diets.__v": 0,
+              "diets.htmlDomDescription": 0,
+              "diet": 0
+          }
+      }
+    ]
+
+    data_breed = list(collection.aggregate(pipeline))
+    data_breed = json.dumps(data_breed, indent=4, default=convert_to_json)
+    return data_breed
+  except Exception as e:
+      # Xử lý lỗi và in ra thông báo lỗi
+      error_message = {"error": str(e)}
+      return json.dumps(error_message)
 
 def process_image(bytes_io):
   try:
