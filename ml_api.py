@@ -19,19 +19,6 @@ app.add_middleware(
     allow_headers=["Accept", "Accept-Encoding", "Authorization", "Content-Type"],
 )
 
-class PredictionRequest(BaseModel):  # Định nghĩa một lớp BaseModel cho request body
-    file_url: str | None = ''
-
-async def process_image(bytes_io):
-    try:
-      image = Image.open(bytes_io)
-      result_label, result_accuracy, result_id = Prediction.get_result(image)
-
-      return result_id, result_label, result_accuracy
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/", include_in_schema=False)
 async def index():
     return RedirectResponse(url="/docs")
@@ -54,7 +41,7 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
         bytes_io = io.BytesIO(contents)
 
         # predict img
-        result_id, result_label, result_accuracy = await process_image(bytes_io)
+        result_id, result_label, result_accuracy, data_breed = Prediction.process_image(bytes_io)
 
         # upload img to cloudinary
         upload_result = Upload_img.Upload_img_to_cloudinary(contents, result_label)
@@ -63,7 +50,7 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
         else:
           return {"message": "Upload image return None"}
 
-        return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img}
+        return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img, "data_breed": data_breed}
     
     if file_url:
       # if not ((file_url.startswith("http://") or file_url.startswith("https://")) and file_url.split(".")[-1] in ("jpg", "jpeg", "png")):
@@ -75,7 +62,7 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
           response.raise_for_status()
           bytes_io = io.BytesIO(response.content)
           # predict img
-          result_id, result_label, result_accuracy = await process_image(bytes_io)
+          result_id, result_label, result_accuracy, data_breed = Prediction.process_image(bytes_io)
           # upload img to cloudinary
           upload_result = Upload_img.Upload_img_to_cloudinary(file_url, result_label)
           if upload_result is not None:
@@ -83,7 +70,7 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
           else:
             return {"message": "Upload image return None"}
           
-          return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img}
+          return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img, "data_breed": data_breed}
       except Exception as e:
           raise HTTPException(status_code=500, detail=str(e))
 
