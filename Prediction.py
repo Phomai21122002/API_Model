@@ -12,12 +12,15 @@ from fastapi import HTTPException
 import re
 from bson import ObjectId
 from datetime import datetime
+from dotenv import dotenv_values
+
 
 print(tf.__version__)
 path_model = 'my_model_NetV2.h5'
 json_file_path = 'labels.json'
 
-path_db = "mongodb+srv://nhatlinhdut3:td1uAMAgupGhminV@pbl7.ozxnm0y.mongodb.net/test?retryWrites=true&w=majority&appName=pbl7"
+env_vars = dotenv_values(".env")
+path_db = env_vars.get("PATH_DB")
 
 # Load the model
 with h5py.File(path_model, 'r+') as f:
