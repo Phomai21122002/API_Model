@@ -8,6 +8,7 @@ import Upload_img
 import requests
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import update_model
 
 app = FastAPI()
 
@@ -73,6 +74,14 @@ async def predict_api(file: UploadFile = File(None), file_url: str = Form(None))
           return {"id": int(result_id), "label": result_label, "accuracy": result_accuracy, "id_img": id_img, "url": url_img, "data_breed": data_breed}
       except Exception as e:
           raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/update_new_model")
+async def update_new_model():
+    try:
+      update_model.file_update_model()
+    except Exception as e:
+      raise HTTPException(status_code=500, detail=str(e))
+    return "successful"
 
 if __name__ == '__main__':
   uvicorn.run(app, port=8000, host='127.0.0.1')

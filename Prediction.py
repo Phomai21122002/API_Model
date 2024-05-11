@@ -122,7 +122,8 @@ def process_image(bytes_io):
     result_label, result_accuracy, result_id = get_result(image)
     data_breed = data_db(result_label)
     data_breed = json.loads(data_breed)
-    return result_id, result_label, result_accuracy, data_breed
+    
+    return result_id, result_label, result_accuracy, data_breed[0]
 
   except Exception as e:
       raise HTTPException(status_code=500, detail=str(e))
