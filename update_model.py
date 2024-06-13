@@ -1,4 +1,3 @@
-import tensorflow as tf
 import time
 from tensorflow.keras.models import load_model, Model
 import json
@@ -8,10 +7,11 @@ from keras.layers import Dense
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.preprocessing import LabelBinarizer
 
 
 def load_model_old():
-  path_model = './my_model_NetV2.h5'
+  path_model = './file_export/my_model_NetV2.h5'
 
   # Load the model
   with h5py.File(path_model, 'r+') as f:
@@ -29,7 +29,7 @@ def load_model_old():
   model = load_model(path_model)
 
   # Đường dẫn đến file JSON chứa thông tin ánh xạ nhãn
-  json_file_path = './labels.json'
+  json_file_path = './file_export/labels.json'
 
   # Đọc nội dung từ file JSON
   with open(json_file_path, 'r') as json_file:
@@ -49,6 +49,24 @@ def load_data():
   folders = glob(training_dir + '/*')
   num_classes = len(folders)
   print ('Total Classes = ' + str(num_classes))
+
+  # Extract class names from folder names
+  class_names = [folder.split('\\')[-1] for folder in folders]
+  class_names.sort()  # Ensure the class names are sorted
+
+  # Initialize LabelBinarizer
+  lb = LabelBinarizer()
+  lb.fit(class_names)
+
+  # Create the mapping
+  labels_mapping = {class_name: idx for idx, class_name in enumerate(lb.classes_)}
+
+  # Convert the mapping to a JSON formatted string
+  labels_mapping_json = json.dumps(labels_mapping, indent=4)
+
+  # Save the JSON to a file
+  with open('./file_export/labels.json', 'w') as json_file:
+    json_file.write(labels_mapping_json)
 
   return training_dir, validation_dir, test_dir, num_classes
 
@@ -106,7 +124,7 @@ def update_model_train(model, training_generator, validation_generator):
   time_train_seconds = end_time - start_time
   time_train_minutes = time_train_seconds / 60
 
-  model.save('./my_model_update.h5')
+  model.save('./file_export/my_model_NetV2.h5')
 
   return history, time_train_minutes
 

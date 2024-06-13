@@ -1,31 +1,35 @@
 import cv2
 import numpy as np
-
+import os
 
 # Load YOLO
-net = cv2.dnn.readNet("./models/yolov3.weights", "./models/yolov3.cfg")
+net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
 classes = []
-with open("./models/coco.names", "r") as f:
+with open("coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
-layer_names = net.getLayerNames()
 
+layer_names = net.getLayerNames()
 unconnected_layers = net.getUnconnectedOutLayers()
-if isinstance(unconnected_layers, int):  # Kiểm tra nếu nó trả về một số nguyên
-    unconnected_layers = [unconnected_layers]  # Chuyển đổi thành danh sách nếu là một số nguyên
+if isinstance(unconnected_layers, int):  # Check if it's an integer
+    unconnected_layers = [unconnected_layers]  # Convert to list if it's an integer
 
 output_layers = [layer_names[i - 1] for i in unconnected_layers]
 
-def DetectAnimal(file_path):
-    imagesDetected = []
-    img = cv2.imread(file_path)
+def detect_and_return_dogs_and_cats(image_bytes):
+    detected_images = []
+    
+    np_arr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    if img is None:
+        print(f"Error: Could not decode image")
+        return detected_images
+    
     img = cv2.resize(img, None, fx=1, fy=1)
     height, width, channels = img.shape
-
     # Detecting objects
     blob = cv2.dnn.blobFromImage(img, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
     net.setInput(blob)
     outs = net.forward(output_layers)
-
     # Showing information on the screen
     class_ids = []
     confidences = []
@@ -41,7 +45,6 @@ def DetectAnimal(file_path):
                 center_y = int(detection[1] * height)
                 w = int(detection[2] * width)
                 h = int(detection[3] * height)
-
                 # Rectangle coordinates
                 x = int(center_x - w / 2)
                 y = int(center_y - h / 2)
@@ -49,25 +52,26 @@ def DetectAnimal(file_path):
                 boxes.append([x, y, w, h])
                 confidences.append(float(confidence))
                 class_ids.append(class_id)
-
+    
     indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
-
     for i in range(len(boxes)):
         if i in indexes:
             x, y, w, h = boxes[i]
-            cropped_image = img[min(y, y+h):max(y, y+h), min(x, x+w):max(x, x+w)]
+            # Determine the size of the square
+            size = max(w, h)
+            # Calculate new coordinates to make the box square
+            new_x = max(x - (size - w) // 2, 0)
+            new_y = max(y - (size - h) // 2, 0)
+            new_w = new_h = size
+            # Ensure the coordinates are within the image bounds
+            if new_x + new_w > width:
+                new_x = width - new_w
+            if new_y + new_h > height:
+                new_y = height - new_h
+
+            cropped_image = img[new_y:new_y+new_h, new_x:new_x+new_w]
             label = str(classes[class_ids[i]])
-            if(label == 'dog' or label =='cat'):               
-                imagesDetected.append(cropped_image)
-    return imagesDetected
-
-img = "./uploads/tim-hieu-ve-giong-cho-shiba-nguon-goc-dac-diem-cach-nuoi-bang-gia-202203281503364263.jpg"
-
-imagesDetected = DetectAnimal(img)
-print(len(imagesDetected))
-for image in imagesDetected:
-    cv2.imshow("image", image)
-
-cv2.waitKey(0) 
-cv2.destroyAllWindows() 
-
+            if label in ['cat', 'dog']:
+                detected_images.append(cropped_image)
+    
+    return detected_images
